@@ -155,23 +155,23 @@ func handleNip05(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetNostrProfileMetaData(npub string, index int) (nostr.ProfileMetadata, error) {
-	ctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
-
 	var metadata *nostr.ProfileMetadata
-	// connect to first relay, todo, check on all/for errors
+	// Prepend special purpose relay wss://purplepag.es to the list of relays
+	var relays = append([]string{"wss://purplepag.es"}, Relays...)
 
-	if index < len(Relays) {
-		rel := Relays[index]
+	for index < len(relays) {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		rel := relays[index]
 		log.Printf("Get Image from: %s", rel)
 		url := rel
 		relay, err := nostr.RelayConnect(ctx, url)
 		if err != nil {
-			log.Printf("Could not get Connect, trying next relay")
-			return GetNostrProfileMetaData(npub, index+1)
-			//return *metadata, err
+			log.Printf("Could not connect to [%s], trying next relay", url)
+			index++
+			continue
 		}
 
-		// create filters
 		var filters nostr.Filters
 		if _, v, err := nip19.Decode(npub); err == nil {
 			t := make(map[string][]string)
@@ -179,25 +179,25 @@ func GetNostrProfileMetaData(npub string, index int) (nostr.ProfileMetadata, err
 			filters = []nostr.Filter{{
 				Authors: []string{v.(string)},
 				Kinds:   []int{0},
-				// limit = 3, get the three most recent notes
-				Limit: 1,
+				Limit:   1,
 			}}
 		} else {
 			log.Printf("Could not find Profile, trying next relay")
-			return GetNostrProfileMetaData(npub, index+1)
-			//return *metadata, err
-
+			index++
+			relay.Close()
+			continue
 		}
 		sub, err := relay.Subscribe(ctx, filters)
 		evs := make([]nostr.Event, 0)
 
+		endStoredEventsOnce := new(sync.Once)
 		go func() {
-			<-sub.EndOfStoredEvents
-
+			endStoredEventsOnce.Do(func() {
+				<-sub.EndOfStoredEvents
+			})
 		}()
 
 		for ev := range sub.Events {
-
 			evs = append(evs, *ev)
 		}
 		relay.Close()
@@ -205,65 +205,67 @@ func GetNostrProfileMetaData(npub string, index int) (nostr.ProfileMetadata, err
 		if len(evs) > 0 {
 			metadata, err = nostr.ParseMetadata(evs[0])
 			log.Printf("Success getting Nostr Profile")
+			break
 		} else {
 			err = fmt.Errorf("no profile found for npub %s on relay %s", npub, url)
 			log.Printf("Could not find Profile, trying next relay")
-			return GetNostrProfileMetaData(npub, index+1)
+			index++
 		}
-
-		return *metadata, err
-	} else {
-		return *metadata, fmt.Errorf("Couldn't download Profile for given relays")
-
 	}
 
+	if metadata == nil {
+		return nostr.ProfileMetadata{}, fmt.Errorf("Couldn't download Profile for given relays")
+	}
+	return *metadata, nil
+}
+
+// Reusable instance of http client
+var httpClient = &http.Client{
+	Timeout: 5 * time.Second,
 }
 
 // addImageToMetaData adds an image to the LNURL metadata
-func addImageToProfile(params *Params, imageurl string) (err error) {
+func addImageToProfile(params *Params, imageURL string) (err error) {
 	// Download and resize profile picture
-	picture, err := DownloadProfilePicture(imageurl)
+	picture, contentType, err := DownloadProfilePicture(imageURL)
 	if err != nil {
 		log.Debug().Str("Downloading profile picture", err.Error()).Msg("Error")
 		return err
 	}
 
 	// Determine image format
-	contentType := http.DetectContentType(picture)
 	var ext string
-	if contentType == "image/jpeg" {
+	switch contentType {
+	case "image/jpeg":
 		ext = "jpeg"
-	} else if contentType == "image/png" {
+	case "image/png":
 		ext = "png"
-	} else if contentType == "image/gif" {
+	case "image/gif":
 		ext = "gif"
-	} else {
+	default:
 		log.Debug().Str("Detecting image format", "unknown format").Msg("Error")
 		return fmt.Errorf("Detecting image format: unknown format")
 	}
 
 	// Set image metadata in LNURL metadata
+	encodedPicture := base64.StdEncoding.EncodeToString(picture)
 	params.Image.Ext = ext
-	params.Image.DataURI = "data:" + contentType + ";base64," + base64.StdEncoding.EncodeToString(picture)
+	params.Image.DataURI = "data:" + contentType + ";base64," + encodedPicture
 	params.Image.Bytes = picture
 
 	return nil
 }
 
-func DownloadProfilePicture(url string) ([]byte, error) {
-	client := http.Client{
-		Timeout: 5 * time.Second,
-	}
-
-	res, err := client.Get(url)
+func DownloadProfilePicture(url string) ([]byte, string, error) {
+	res, err := httpClient.Get(url)
 	if err != nil {
-		return nil, errors.New("failed to download image: " + err.Error())
+		return nil, "", errors.New("failed to download image: " + err.Error())
 	}
 	defer res.Body.Close()
 
 	contentType := res.Header.Get("Content-Type")
 	if contentType != "image/jpeg" && contentType != "image/png" && contentType != "image/gif" {
-		return nil, errors.New("unsupported image format")
+		return nil, "", errors.New("unsupported image format")
 	}
 
 	var img image.Image
@@ -276,7 +278,7 @@ func DownloadProfilePicture(url string) ([]byte, error) {
 		img, err = gif.Decode(res.Body)
 	}
 	if err != nil {
-		return nil, errors.New("failed to decode image: " + err.Error())
+		return nil, "", errors.New("failed to decode image: " + err.Error())
 	}
 
 	img = resize.Thumbnail(thumbnailWidth, thumbnailHeight, img, resize.Lanczos3)
@@ -284,9 +286,9 @@ func DownloadProfilePicture(url string) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	if err := jpeg.Encode(buf, img, nil); err != nil {
-		return nil, errors.New("failed to encode image: " + err.Error())
+		return nil, "", errors.New("failed to encode image: " + err.Error())
 	}
-	return buf.Bytes(), nil
+	return buf.Bytes(), contentType, nil
 }
 
 func publishNostrEvent(ev nostr.Event, relays []string) {
