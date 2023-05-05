@@ -119,38 +119,52 @@ func sendMessage(receiverKey string, message string) {
 }
 
 func handleNip05(w http.ResponseWriter, r *http.Request) {
-	var err error
-	var response string
+	username := r.URL.Query().Get("name")
+	if username == "" {
+		http.Error(w, `{"error": "missing 'name' parameter"}`, http.StatusBadRequest)
+		return
+	}
 
-	var allusers []Params
-	allusers, err = GetAllUsers(s.Domain)
-	firstpartstring := "{\n  \"names\": {\n"
-	finalpartstring := " \t}\n}"
-	var middlestring = ""
+	domains := getDomains(s.Domain)
+	domain := ""
 
-	for _, user := range allusers {
-		nostrnpubHex := DecodeBench32(user.Npub)
-		if user.Npub != "" { //do some more validation checks
-			middlestring = middlestring + "\t\"" + user.Name + "\"" + ": " + "\"" + nostrnpubHex + "\"" + ",\n"
+	if len(domains) == 1 {
+		domain = domains[0]
+	} else {
+		hostname := r.URL.Host
+		if hostname == "" {
+			hostname = r.Host
 		}
+
+		for _, one := range domains {
+			if strings.Contains(hostname, one) {
+				domain = one
+				break
+			}
+		}
+		if domain == "" {
+			http.Error(w, `{"error": "incorrect domain"}`, http.StatusBadRequest)
+			return
+		}
+	}
+
+	params, err := GetName(username, domain)
+	if err != nil {
+		log.Error().Err(err).Str("name", username).Str("domain", domain).Msg("failed to get name")
+		http.Error(w, fmt.Sprintf(`{"error": "failed to get name %s@%s"}`, username, domain), http.StatusNotFound)
+		return
+	}
+
+	nostrnpubHex := DecodeBench32(params.Npub)
+	response := map[string]interface{}{
+		"names": map[string]interface{}{
+			username: nostrnpubHex,
+		},
 	}
 
 	if s.Nip05 {
-		//Remove ',' from last entry
-		if len(middlestring) > 2 {
-			middlestringtrim := middlestring[:len(middlestring)-2]
-			middlestringtrim += "\n"
-
-			response = firstpartstring + middlestringtrim + finalpartstring
-		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		fmt.Fprintf(w, response)
-	} else {
-		return
-	}
-
-	if err != nil {
-		return
+		json.NewEncoder(w).Encode(response)
 	}
 }
 
