@@ -9,7 +9,7 @@ Federated Lightning Address Server (with NIP57 Zap support)
 
 New parameters in this fork:
 
-> The (`NOSTR_PRIVATE_KEY`) in the parameters should be in bench32 format (`nsec..`) and it should be a new one. It is needed to sign messages only, so does not need and should not be your main account key.
+> The (`NOSTR_PRIVATE_KEY`) in the parameters should be in Bech32 format (`nsec..`) and it should be a new one. It is needed to sign messages only, so does not need and should not be your main account key.
 
 > (`NIP05`) will run a NIPO5 instance so that users that register with their NPUB can use their Lightning address for validation in Nostr as well. 
 
