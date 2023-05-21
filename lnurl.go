@@ -116,7 +116,7 @@ func handleLNURL(w http.ResponseWriter, r *http.Request) {
 		if len(s.NostrPrivateKey) > 0 {
 			//allows users to use nsec keys, work with hex internally.
 			//This can be any private key, not necessarily from the user.
-			nostrPrivkeyHex = DecodeBench32(s.NostrPrivateKey)
+			nostrPrivkeyHex = DecodeBech32(s.NostrPrivateKey)
 			allowNostr = true
 			pk := nostrPrivkeyHex
 			pub, _ := nostr.GetPublicKey(pk)
@@ -277,9 +277,9 @@ func serveLNURLpSecond(w http.ResponseWriter, params *Params, username string, a
 	if zapEvent.Sig != "" {
 		// TODO: Handle the err
 		nip57Receipt, err = CreateNostrReceipt(zapEvent, invoice)
-		sender = "@" + EncodeBench32Public(zapEvent.PubKey)
+		sender = "@" + EncodeBech32Public(zapEvent.PubKey)
 		if zapEvent.Tags.GetFirst([]string{"e"}) != nil {
-			note = "@" + EncodeBench32Note(zapEvent.Tags.GetFirst([]string{"e"}).Value())
+			note = "@" + EncodeBech32Note(zapEvent.Tags.GetFirst([]string{"e"}).Value())
 		}
 		if zapEvent.Tags.GetFirst([]string{"anon"}) != nil {
 			if zapEvent.Tags.GetFirst([]string{"anon"}).Value() == "" {

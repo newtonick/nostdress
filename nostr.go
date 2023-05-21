@@ -46,7 +46,7 @@ func Nip57DescriptionHash(zapEventSerialized string) string {
 	return hashString
 }
 
-func DecodeBench32(key string) string {
+func DecodeBech32(key string) string {
 	if _, v, err := nip19.Decode(key); err == nil {
 		return v.(string)
 	}
@@ -54,21 +54,21 @@ func DecodeBench32(key string) string {
 
 }
 
-func EncodeBench32Public(key string) string {
+func EncodeBech32Public(key string) string {
 	if v, err := nip19.EncodePublicKey(key); err == nil {
 		return v
 	}
 	return key
 }
 
-func EncodeBench32Private(key string) string {
+func EncodeBech32Private(key string) string {
 	if v, err := nip19.EncodePrivateKey(key); err == nil {
 		return v
 	}
 	return key
 }
 
-func EncodeBench32Note(key string) string {
+func EncodeBech32Note(key string) string {
 	if v, err := nip19.EncodeNote(key); err == nil {
 		return v
 	}
@@ -79,7 +79,7 @@ func sendMessage(receiverKey string, message string) {
 
 	var relays []string
 	var tags nostr.Tags
-	reckey := DecodeBench32(receiverKey)
+	reckey := DecodeBech32(receiverKey)
 	tags = append(tags, nostr.Tag{"p", reckey})
 
 	//references, err := optSlice(opts, "--reference")
@@ -91,7 +91,7 @@ func sendMessage(receiverKey string, message string) {
 	//}
 
 	// parse and encrypt content
-	privkeyhex := DecodeBench32(s.NostrPrivateKey)
+	privkeyhex := DecodeBech32(s.NostrPrivateKey)
 	pubkey, _ := nostr.GetPublicKey(privkeyhex)
 
 	sharedSecret, err := nip04.ComputeSharedSecret(reckey, privkeyhex)
@@ -155,7 +155,7 @@ func handleNip05(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nostrnpubHex := DecodeBench32(params.Npub)
+	nostrnpubHex := DecodeBech32(params.Npub)
 	response := map[string]interface{}{
 		"names": map[string]interface{}{
 			username: nostrnpubHex,
