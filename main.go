@@ -39,7 +39,7 @@ type Settings struct {
 	Nip05              bool   `envconfig:"NIP05" default:"false" required:"false"`
 	GetNostrProfile    bool   `envconfig:"GET_NOSTR_PROFILE" required:"false" default:"false"`
 	ForceMigrate       bool   `envconfig:"FORCE_MIGRATE"  default:"false"`
-	TorProxyURL        string `envconfig:"TOR_PROXY_URL"`
+	TorProxyURL        string `envconfig:"TOR_PROXY_URL" default:""`
 	NotifyNostrUsers   bool   `envconfig:"NOTIFY_NOSTR_USERS" required:"false" default:"true"`
 	AllowRegistration  bool   `envconfig:"ALLOW_REGISTRATION" required:"false" default:"true"`
 	AllowAPI           bool   `envconfig:"ALLOW_API" required:"false" default:"true"`
@@ -92,6 +92,7 @@ func main() {
 	s.Domain = strings.ToLower(s.Domain)
 
 	if s.TorProxyURL != "" {
+		TorProxyURL = s.TorProxyURL
 		makeinvoice.TorProxyURL = s.TorProxyURL
 	}
 
