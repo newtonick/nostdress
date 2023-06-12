@@ -253,6 +253,20 @@ func main() {
 			},
 		)
 
+		router.Path("/api/listUsers/").HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+
+				var allusers []Params
+				allusers, err = GetAllUsers(s.Domain)
+
+				var result = ""
+				for _, user := range allusers {
+					result += user.Name + "@" + s.Domain + "\n"
+				}
+				fmt.Fprint(w, result)
+			},
+		)
+
 		api := router.PathPrefix("/api/v1").Subrouter()
 		api.Use(authenticate)
 
