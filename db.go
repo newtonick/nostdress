@@ -49,6 +49,10 @@ func SaveName(
 	name = strings.ToLower(name)
 	domain = strings.ToLower(domain)
 
+	//remove trailing "/" from host
+	host_formatted := params.Host
+	params.Host = strings.TrimRight(host_formatted, "/")
+
 	if params.Npub != "" && s.GetNostrProfile {
 		NostrProfile, err := GetNostrProfileMetaData(params.Npub, 0)
 		if err == nil {
