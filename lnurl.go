@@ -19,7 +19,7 @@ var nostrPrivkeyHex string = ""
 var nostrPubkey string = ""
 var minSendable int = 1000
 var maxSendable int = 1000000000
-var CommentAllowed int = 500
+var CommentAllowed int = 2000
 
 type LNURLPayParamsCustom struct {
 	lnurl.LNURLResponse
