@@ -279,18 +279,17 @@ func main() {
 		api.HandleFunc("/users/{name}@{domain}", GetUser).Methods("GET")
 		api.HandleFunc("/users/{name}@{domain}", UpdateUser).Methods("PUT")
 		api.HandleFunc("/users/{name}@{domain}", DeleteUser).Methods("DELETE")
-
-		srv := &http.Server{
-			Handler:      cors.Default().Handler(router),
-			Addr:         s.Host + ":" + s.Port,
-			WriteTimeout: 15 * time.Second,
-			ReadTimeout:  15 * time.Second,
-		}
-		log.Debug().Str("addr", srv.Addr).Msg("listening")
-
-		srv.ListenAndServe()
-
 	}
+
+    srv := &http.Server{
+        Handler:      cors.Default().Handler(router),
+        Addr:         s.Host + ":" + s.Port,
+        WriteTimeout: 15 * time.Second,
+        ReadTimeout:  15 * time.Second,
+    }
+    log.Debug().Str("addr", srv.Addr).Msg("listening")
+
+    srv.ListenAndServe()
 }
 
 func getDomains(s string) []string {
