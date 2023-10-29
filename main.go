@@ -62,7 +62,7 @@ var indexHTML string
 //go:embed grab.html
 var grabHTML string
 
-//go:embed static
+//go:embed nostdress-static
 var static embed.FS
 
 func main() {
@@ -111,10 +111,11 @@ func main() {
 	router.Path("/.well-known/lnurlp/{user}").Methods("GET").
 		HandlerFunc(handleLNURL)
 
-	router.Path("/.well-known/nostr.json").Methods("GET").
-		HandlerFunc(handleNip05)
+	//router.Path("/.well-known/nostr.json").Methods("GET").
+	//	HandlerFunc(handleNip05)
 
-	router.Path("/lnaddress").HandlerFunc(
+        if s.AllowRegistration {
+	router.Path("/nostdress/lnaddress").HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			//renderHTML(w, indexHTML, map[string]interface{}{})
 			renderHTML(w, indexHTML, struct {
@@ -123,21 +124,22 @@ func main() {
 			}{strconv.FormatBool(s.AllowRegistration), strconv.FormatBool(s.NotifyNostrUsers)})
 		},
 	)
+        }
 
 	router.Path("/").HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			if s.ForwardMainPageUrl != "" {
 				http.Redirect(w, r, s.ForwardMainPageUrl, http.StatusSeeOther)
 			} else {
-				http.Redirect(w, r, "/lnaddress", http.StatusSeeOther)
+				http.Redirect(w, r, "/nostdress/lnaddress", http.StatusSeeOther)
 			}
 
 		},
 	)
 
-	router.PathPrefix("/static/").Handler(http.FileServer(http.FS(static)))
+	router.PathPrefix("/nostdress-static/").Handler(http.FileServer(http.FS(static)))
 
-	router.Path("/grab").HandlerFunc(
+	router.Path("/nostdress/grab").HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			name := r.FormValue("name")
 			if name == "" || r.FormValue("kind") == "" {
@@ -279,18 +281,17 @@ func main() {
 		api.HandleFunc("/users/{name}@{domain}", GetUser).Methods("GET")
 		api.HandleFunc("/users/{name}@{domain}", UpdateUser).Methods("PUT")
 		api.HandleFunc("/users/{name}@{domain}", DeleteUser).Methods("DELETE")
-
-		srv := &http.Server{
-			Handler:      cors.Default().Handler(router),
-			Addr:         s.Host + ":" + s.Port,
-			WriteTimeout: 15 * time.Second,
-			ReadTimeout:  15 * time.Second,
-		}
-		log.Debug().Str("addr", srv.Addr).Msg("listening")
-
-		srv.ListenAndServe()
-
 	}
+
+	srv := &http.Server{
+		Handler:      cors.Default().Handler(router),
+		Addr:         s.Host + ":" + s.Port,
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+	log.Debug().Str("addr", srv.Addr).Msg("listening")
+
+	srv.ListenAndServe()
 }
 
 func getDomains(s string) []string {
