@@ -400,6 +400,7 @@ func CreateNostrReceipt(zapEvent nostr.Event, invoice string) (nostr.Event, erro
 		Kind:      9735,
 		Tags: nostr.Tags{
 			*zapEvent.Tags.GetFirst([]string{"p"}),
+			[]string{"P", zapEvent.PubKey},
 			[]string{"bolt11", invoice},
 			[]string{"description", string(zapEventSerialized)},
 		},
