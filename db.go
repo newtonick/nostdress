@@ -128,7 +128,7 @@ func GetAllUsers(domain string) ([]Params, error) {
 	var k []byte
 	var paramslist []Params
 
-	iter := db.NewIter(nil)
+	iter, _ := db.NewIter(nil)
 	for iter.SeekGE(k); iter.Valid(); iter.Next() {
 		val, closer, err := db.Get([]byte(iter.Key()))
 		if err != nil {
@@ -192,7 +192,7 @@ func tryMigrate(old, new string) {
 	}
 	defer oldDb.Close()
 
-	iter := oldDb.NewIter(nil)
+	iter, err := oldDb.NewIter(nil)
 	defer iter.Close()
 
 	for iter.First(); iter.Valid(); iter.Next() {

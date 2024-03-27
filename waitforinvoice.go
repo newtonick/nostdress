@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -116,7 +115,7 @@ func WaitForInvoicePaid(payvalues LNURLPayValuesCustom, params *Params) {
 					}
 					defer resp.Body.Close()
 
-					b, err := ioutil.ReadAll(resp.Body)
+					b, err := io.ReadAll(resp.Body)
 					if err != nil {
 						fmt.Print(err.Error())
 						return
@@ -157,7 +156,7 @@ func WaitForInvoicePaid(payvalues LNURLPayValuesCustom, params *Params) {
 						return
 					}
 
-					if jsonMap["paid"].(bool) == true {
+					if jsonMap["paid"].(bool) {
 
 						payvalues.PaidAt = time.Now()
 						fmt.Print("LnBits says paid..\n")
@@ -186,7 +185,7 @@ func WaitForInvoicePaid(payvalues LNURLPayValuesCustom, params *Params) {
 				}
 
 				//If invoice is paid and DescriptionHash matches Nip57 DescriptionHash, publish Zap Nostr Event. This is rather a sanity check.
-				if payvalues.Paid == true {
+				if payvalues.Paid {
 					var amount = bolt11.MSatoshi / 1000
 
 					if payvalues.Nip57Receipt.Tags != nil {
