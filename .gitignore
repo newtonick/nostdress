@@ -5,3 +5,4 @@
 *.db
 satdress
 nostdress
+.DS_Store

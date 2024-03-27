@@ -36,6 +36,34 @@ type NostrEvent struct {
 	Sig       string    `json:"sig"`
 }
 
+type ProfileMetadata struct {
+	Name        string `json:"name,omitempty"`
+	DisplayName string `json:"display_name,omitempty"`
+	About       string `json:"about,omitempty"`
+	Website     string `json:"website,omitempty"`
+	Picture     string `json:"picture,omitempty"`
+	Banner      string `json:"banner,omitempty"`
+	NIP05       string `json:"nip05,omitempty"`
+	LUD16       string `json:"lud16,omitempty"`
+}
+
+func ParseMetadata(event nostr.Event) (*ProfileMetadata, error) {
+	if event.Kind != 0 {
+		return nil, fmt.Errorf("event %s is kind %d, not 0", event.ID, event.Kind)
+	}
+
+	var meta ProfileMetadata
+	if err := json.Unmarshal([]byte(event.Content), &meta); err != nil {
+		cont := event.Content
+		if len(cont) > 100 {
+			cont = cont[0:99]
+		}
+		return nil, fmt.Errorf("failed to parse metadata (%s) from event %s: %w", cont, event.ID, err)
+	}
+
+	return &meta, nil
+}
+
 var nip57Receipt nostr.Event
 var zapEventSerializedStr string
 var nip57ReceiptRelays []string
@@ -108,7 +136,7 @@ func sendMessage(receiverKey string, message string) {
 
 	event := nostr.Event{
 		PubKey:    pubkey,
-		CreatedAt: time.Now(),
+		CreatedAt: nostr.Now(),
 		Kind:      nostr.KindEncryptedDirectMessage,
 		Tags:      tags,
 		Content:   encryptedMessage,
@@ -168,8 +196,8 @@ func handleNip05(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetNostrProfileMetaData(npub string, index int) (nostr.ProfileMetadata, error) {
-	var metadata *nostr.ProfileMetadata
+func GetNostrProfileMetaData(npub string, index int) (ProfileMetadata, error) {
+	var metadata *ProfileMetadata
 	// Prepend special purpose relay wss://purplepag.es to the list of relays
 	var relays = append([]string{"wss://purplepag.es"}, Relays...)
 
@@ -217,7 +245,7 @@ func GetNostrProfileMetaData(npub string, index int) (nostr.ProfileMetadata, err
 		relay.Close()
 
 		if len(evs) > 0 {
-			metadata, err = nostr.ParseMetadata(evs[0])
+			metadata, err = ParseMetadata(evs[0])
 			log.Printf("Success getting Nostr Profile")
 			break
 		} else {
@@ -228,7 +256,7 @@ func GetNostrProfileMetaData(npub string, index int) (nostr.ProfileMetadata, err
 	}
 
 	if metadata == nil {
-		return nostr.ProfileMetadata{}, fmt.Errorf("Couldn't download Profile for given relays")
+		return ProfileMetadata{}, fmt.Errorf("Couldn't download Profile for given relays")
 	}
 	return *metadata, nil
 }
@@ -329,7 +357,6 @@ func publishNostrEvent(ev nostr.Event, relays []string) {
 
 			var err error
 			var conn *nostr.Relay
-			var status nostr.Status
 			maxRetries := 3
 			retryDelay := 1 * time.Second
 
@@ -349,7 +376,7 @@ func publishNostrEvent(ev nostr.Event, relays []string) {
 
 				// Set a timeout for publishing to the relay
 				pubCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				status, err = conn.Publish(pubCtx, ev)
+				err = conn.Publish(pubCtx, ev)
 				cancel()
 
 				if err != nil {
@@ -358,7 +385,7 @@ func publishNostrEvent(ev nostr.Event, relays []string) {
 					retryDelay *= 2
 					continue
 				} else {
-					log.Printf("[NOSTR] published to %s: %s", url, status.String())
+					log.Printf("[NOSTR] published to %s: %s", url, "sent")
 					break
 				}
 			}
@@ -396,7 +423,7 @@ func CreateNostrReceipt(zapEvent nostr.Event, invoice string) (nostr.Event, erro
 
 	nip57Receipt := nostr.Event{
 		PubKey:    pub,
-		CreatedAt: time.Now(),
+		CreatedAt: nostr.Now(),
 		Kind:      9735,
 		Tags: nostr.Tags{
 			*zapEvent.Tags.GetFirst([]string{"p"}),

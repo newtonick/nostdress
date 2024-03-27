@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -86,7 +87,7 @@ func WaitForInvoicePaid(payvalues LNURLPayValuesCustom, params *Params) {
 
 		Client.Transport = specialTransport
 		var maxiterations = 100
-		ticker := time.NewTicker(1 * time.Second)
+		ticker := time.NewTicker(100 * time.Millisecond)
 		quit := make(chan struct{})
 
 		for {
@@ -128,26 +129,44 @@ func WaitForInvoicePaid(payvalues LNURLPayValuesCustom, params *Params) {
 
 				case LNBitsParams:
 
-					response, err := http.Get(backend.Host + "/api/v1/payments/" + bolt11.PaymentHash)
+					client := &http.Client{}
+					url := backend.Host + "/api/v1/payments/" + bolt11.PaymentHash
+					req, _ := http.NewRequest("GET", url, nil)
+					req.Header.Set("X-Api-Key", backend.Key)
+					req.Header.Set("Content-type", "application/json")
+
+					response, err := client.Do(req)
+
+					//response, err := http.Get(backend.Host + "/api/v1/payments/" + bolt11.PaymentHash)
 					if err != nil {
 						fmt.Print(err.Error())
 						return
 					}
-					responseData, err := ioutil.ReadAll(response.Body)
+
+					responseData, err := io.ReadAll(response.Body)
+
 					if err != nil {
 						fmt.Print(err.Error())
 						return
 					}
 					var jsonMap map[string]interface{}
 					err = json.Unmarshal([]byte(string(responseData)), &jsonMap)
+
 					if err != nil {
 						fmt.Print(err.Error())
 						return
 					}
 
-					if jsonMap["paid"].(bool) {
+					if jsonMap["paid"].(bool) == true {
+
 						payvalues.PaidAt = time.Now()
+						fmt.Print("LnBits says paid..\n")
+						fmt.Print("Payment hash:" + bolt11.PaymentHash + "\n")
+						fmt.Println(string(responseData))
 						payvalues.Paid = true
+
+					} else {
+						fmt.Print("Checking invoice..\n")
 					}
 
 				case LNPayParams:
@@ -167,10 +186,10 @@ func WaitForInvoicePaid(payvalues LNURLPayValuesCustom, params *Params) {
 				}
 
 				//If invoice is paid and DescriptionHash matches Nip57 DescriptionHash, publish Zap Nostr Event. This is rather a sanity check.
-				if payvalues.Paid {
+				if payvalues.Paid == true {
 					var amount = bolt11.MSatoshi / 1000
 
-					if *&payvalues.Nip57Receipt.Tags != nil {
+					if payvalues.Nip57Receipt.Tags != nil {
 						var descriptionTag = *payvalues.Nip57Receipt.Tags.GetFirst([]string{"description"})
 
 						if bolt11.DescriptionHash == Nip57DescriptionHash(descriptionTag.Value()) {
@@ -195,6 +214,7 @@ func WaitForInvoicePaid(payvalues LNURLPayValuesCustom, params *Params) {
 									go sendMessage(params.Npub, "Received Profile Zap from "+payvalues.Sender+" with amount: "+strconv.FormatInt(amount, 10)+" "+satsr+" ⚡️.")
 								}
 							}
+							//payvalues.Nip57Receipt.String()
 							log.Debug().Str("ZAPPED ⚡️", "Published zap on Nostr").Msg("Nostr")
 							close(quit)
 							return
