@@ -1,7 +1,6 @@
 module github.com/believethehype/nostdress
 
-go 1.22.1
-
+go 1.22
 
 require (
 	github.com/cockroachdb/pebble v0.0.0-20230412222916-60cfeb46143b
