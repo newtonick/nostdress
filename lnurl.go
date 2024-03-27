@@ -165,7 +165,7 @@ func handleLNURL(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				if len(zapEvent.Tags) == 0 || zapEvent.Tags.GetFirst([]string{"p"}) == nil {
-					log.Error().Err(err).Str("Nostr NIP-57 zap event validation error ", err.Error())
+					log.Error().Err(err).Str("Nostr NIP-57 zap event validation error ", "")
 					return
 				}
 			}

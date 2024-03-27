@@ -1,8 +1,7 @@
 module github.com/believethehype/nostdress
 
-go 1.21
+go 1.22.1
 
-toolchain go1.22.1
 
 require (
 	github.com/cockroachdb/pebble v0.0.0-20230412222916-60cfeb46143b
@@ -32,7 +31,6 @@ require (
 
 require (
 	github.com/DataDog/zstd v1.5.2 // indirect
-	github.com/SaveTheRbtz/generic-sync-map-go v0.0.0-20230201052002-6c5833b989be // indirect
 	github.com/aead/siphash v1.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcd v0.23.5-0.20230125025938-be056b0a0b2f // indirect
@@ -96,7 +94,6 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5
-	github.com/valyala/fastjson v1.6.4 // indirect
 	golang.org/x/crypto v0.8.0 // indirect
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53 // indirect
 	golang.org/x/mod v0.10.0 // indirect
