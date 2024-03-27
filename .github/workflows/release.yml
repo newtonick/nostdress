@@ -28,10 +28,10 @@ jobs:
         goarch: [amd64]
     steps:
       - uses: actions/checkout@v3
-      - uses: wangyoucao577/go-release-action@v1.41
+      - uses: wangyoucao577/go-release-action@v1.49
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-          goversion: "1.22"
+          goversion: "1.21"
           overwrite: true
