@@ -437,6 +437,14 @@ func CreateNostrReceipt(zapEvent nostr.Event, invoice string) (nostr.Event, erro
 		nip57Receipt.Tags = nip57Receipt.Tags.AppendUnique(*eTag)
 	}
 
+	if aTags := zapEvent.Tags.GetAll([]string{"a"}); aTags != nil {
+		for _, s := range aTags {
+			if s.Key() == "a" {
+				nip57Receipt.Tags = nip57Receipt.Tags.AppendUnique(s)
+			}
+		}
+	}
+
 	err = nip57Receipt.Sign(nostrPrivkeyHex)
 	if err != nil {
 		return nostr.Event{}, err
