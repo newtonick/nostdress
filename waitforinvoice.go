@@ -156,17 +156,24 @@ func WaitForInvoicePaid(payvalues LNURLPayValuesCustom, params *Params) {
 						return
 					}
 
-					if jsonMap["paid"].(bool) {
+					r, ok := jsonMap["paid"]
+					if !ok {
+						fmt.Print("Can't read paid tag")
+						return
+						// returnValues not present in Params map. Handle the scenario
+						// and don't continue below
+					}
+					if r.(bool) {
 
 						payvalues.PaidAt = time.Now()
 						fmt.Print("LnBits says paid..\n")
 						fmt.Print("Payment hash:" + bolt11.PaymentHash + "\n")
 						fmt.Println(string(responseData))
 						payvalues.Paid = true
-
-					} else {
-						fmt.Print("Checking invoice..\n")
 					}
+					// else {
+					//fmt.Print("Checking invoice..\n")
+					//}
 
 				case LNPayParams:
 					//TODO
